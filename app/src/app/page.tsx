@@ -5,13 +5,22 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { GlobalHealthCard } from "@/components/GlobalHealthCard";
 import { PositionTable } from "@/components/PositionTable";
-import { useMockPositions } from "@/hooks/useMockPositions";
+import { usePositions } from "@/hooks/usePositions";
 import { computeGlobalHealth, findRefinanceOpportunities } from "@/lib/health";
 import { RefinanceOpportunity } from "@/types";
+import { PROTOCOL_LABELS } from "@/lib/constants";
 
 export default function Home() {
   const { connected } = useWallet();
-  const { positions, loading, ratesByProtocol } = useMockPositions();
+  const {
+    positions,
+    loading,
+    ratesByProtocol,
+    errors,
+    demoMode,
+    setDemoMode,
+    protocolStatus,
+  } = usePositions();
   const [selectedOpp, setSelectedOpp] = useState<RefinanceOpportunity | null>(null);
 
   const globalHealth = computeGlobalHealth(positions);
@@ -51,11 +60,45 @@ export default function Home() {
           </div>
         ) : (
           <>
+            {/* Demo mode toggle */}
+            <div className="flex items-center justify-between bg-white/5 border border-white/10 rounded-xl px-4 py-3">
+              <div className="flex items-center gap-2 text-sm text-white/60">
+                <span>Mode:</span>
+                <button
+                  onClick={() => setDemoMode(false)}
+                  className={`px-3 py-1 rounded-lg text-xs font-medium transition ${!demoMode ? "bg-emerald-500 text-black" : "text-white/40 hover:text-white"}`}
+                >
+                  Live (devnet)
+                </button>
+                <button
+                  onClick={() => setDemoMode(true)}
+                  className={`px-3 py-1 rounded-lg text-xs font-medium transition ${demoMode ? "bg-purple-500 text-white" : "text-white/40 hover:text-white"}`}
+                >
+                  Demo
+                </button>
+              </div>
+              <div className="flex gap-3 text-xs text-white/40">
+                {(["kamino", "marginfi", "solend"] as const).map((p) => (
+                  <span key={p} className="flex items-center gap-1">
+                    <span className={protocolStatus[p].loading ? "animate-pulse text-yellow-400" : protocolStatus[p].error ? "text-red-400" : "text-emerald-400"}>●</span>
+                    {PROTOCOL_LABELS[p === "kamino" ? 0 : p === "marginfi" ? 1 : 2]}
+                  </span>
+                ))}
+              </div>
+            </div>
+
             {/* Scanning banner */}
             {loading && (
               <div className="flex items-center gap-3 text-white/60 text-sm bg-white/5 border border-white/10 rounded-xl px-4 py-3">
                 <div className="w-3 h-3 rounded-full bg-emerald-400 animate-pulse" />
                 Scanning your positions across Kamino, MarginFi, and Solend...
+              </div>
+            )}
+
+            {/* Errors */}
+            {errors.length > 0 && !demoMode && (
+              <div className="text-xs text-yellow-400 bg-yellow-400/10 border border-yellow-400/20 rounded-lg px-3 py-2">
+                ⚠ Some protocols unavailable on devnet — switch to Demo mode to preview the full UI.
               </div>
             )}
 
