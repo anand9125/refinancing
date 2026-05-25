@@ -1,14 +1,15 @@
 "use client";
 
-import { useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { GlobalHealthCard } from "@/components/GlobalHealthCard";
 import { PositionTable } from "@/components/PositionTable";
+import { RefinanceModal } from "@/components/RefinanceModal";
 import { usePositions } from "@/hooks/usePositions";
+import { useRefinanceFlow } from "@/hooks/useRefinanceFlow";
 import { computeGlobalHealth, findRefinanceOpportunities } from "@/lib/health";
-import { RefinanceOpportunity } from "@/types";
 import { PROTOCOL_LABELS } from "@/lib/constants";
+import { RefinanceOpportunity } from "@/types";
 
 export default function Home() {
   const { connected } = useWallet();
@@ -21,10 +22,15 @@ export default function Home() {
     setDemoMode,
     protocolStatus,
   } = usePositions();
-  const [selectedOpp, setSelectedOpp] = useState<RefinanceOpportunity | null>(null);
+
+  const flow = useRefinanceFlow();
 
   const globalHealth = computeGlobalHealth(positions);
   const opportunities = findRefinanceOpportunities(positions, ratesByProtocol);
+
+  function handleRefinance(opp: RefinanceOpportunity) {
+    flow.open(opp);
+  }
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white">
@@ -80,7 +86,17 @@ export default function Home() {
               <div className="flex gap-3 text-xs text-white/40">
                 {(["kamino", "marginfi", "solend"] as const).map((p) => (
                   <span key={p} className="flex items-center gap-1">
-                    <span className={protocolStatus[p].loading ? "animate-pulse text-yellow-400" : protocolStatus[p].error ? "text-red-400" : "text-emerald-400"}>●</span>
+                    <span
+                      className={
+                        protocolStatus[p].loading
+                          ? "animate-pulse text-yellow-400"
+                          : protocolStatus[p].error
+                          ? "text-red-400"
+                          : "text-emerald-400"
+                      }
+                    >
+                      ●
+                    </span>
                     {PROTOCOL_LABELS[p === "kamino" ? 0 : p === "marginfi" ? 1 : 2]}
                   </span>
                 ))}
@@ -138,83 +154,15 @@ export default function Home() {
                 positions={positions}
                 opportunities={opportunities}
                 loading={loading}
-                onRefinance={setSelectedOpp}
+                onRefinance={handleRefinance}
               />
             </section>
-
-            {/* Refinance modal placeholder */}
-            {selectedOpp && (
-              <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4">
-                <div className="bg-[#111118] border border-white/10 rounded-2xl p-6 max-w-md w-full space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-lg">Refinance Position</h3>
-                    <button
-                      onClick={() => setSelectedOpp(null)}
-                      className="text-white/40 hover:text-white text-xl leading-none"
-                    >
-                      ×
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <InfoRow label="From" value={`Protocol ${selectedOpp.position.protocol}`} />
-                    <InfoRow label="To" value={`Protocol ${selectedOpp.targetProtocol}`} />
-                    <InfoRow
-                      label="Current APR"
-                      value={`${(selectedOpp.position.borrowApr * 100).toFixed(2)}%`}
-                    />
-                    <InfoRow
-                      label="New APR"
-                      value={`${(selectedOpp.targetBorrowApr * 100).toFixed(2)}%`}
-                    />
-                    <InfoRow
-                      label="Monthly Saving"
-                      value={`$${selectedOpp.monthlySavingsUsd.toFixed(2)}`}
-                      highlight
-                    />
-                    <InfoRow
-                      label="Annual Saving"
-                      value={`$${selectedOpp.annualSavingsUsd.toFixed(2)}`}
-                      highlight
-                    />
-                  </div>
-
-                  <p className="text-xs text-white/40 bg-white/5 rounded-lg p-3">
-                    Guided refinancing flow coming in Phase 4. This will walk
-                    you through 4 on-chain steps using the RefinanceRouter program.
-                  </p>
-
-                  <button
-                    onClick={() => setSelectedOpp(null)}
-                    className="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 transition text-black font-semibold"
-                  >
-                    Coming Soon — Phase 4
-                  </button>
-                </div>
-              </div>
-            )}
           </>
         )}
       </main>
-    </div>
-  );
-}
 
-function InfoRow({
-  label,
-  value,
-  highlight = false,
-}: {
-  label: string;
-  value: string;
-  highlight?: boolean;
-}) {
-  return (
-    <div className="bg-white/5 rounded-lg px-3 py-2">
-      <p className="text-white/40 text-xs">{label}</p>
-      <p className={`font-semibold text-sm mt-0.5 ${highlight ? "text-emerald-400" : "text-white"}`}>
-        {value}
-      </p>
+      {/* Guided refinance modal */}
+      <RefinanceModal flow={flow} />
     </div>
   );
 }
