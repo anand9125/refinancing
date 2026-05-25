@@ -23,3 +23,5 @@ app/.next/
 
 # OS
 .DS_Store
+test-ledger/
+Cargo.lock

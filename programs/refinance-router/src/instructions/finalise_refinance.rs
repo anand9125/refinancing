@@ -18,7 +18,7 @@ pub struct FinaliseRefinance<'info> {
     pub refinance_state: Account<'info, RefinanceState>,
 }
 
-pub fn handler(ctx: Context<FinaliseRefinance>) -> Result<()> {
+pub fn handle_finalise(ctx: Context<FinaliseRefinance>) -> Result<()> {
     let state = &ctx.accounts.refinance_state;
 
     require!(state.step == STEP_DEPOSITED, RefinanceError::WrongStep);

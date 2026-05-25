@@ -1,5 +1,4 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::Mint;
 use crate::errors::RefinanceError;
 use crate::state::*;
 
@@ -18,13 +17,15 @@ pub struct InitiateRefinance<'info> {
     )]
     pub refinance_state: Account<'info, RefinanceState>,
 
-    pub collateral_mint: Account<'info, Mint>,
-    pub debt_mint: Account<'info, Mint>,
+    /// CHECK: we only store the mint address; no need to deserialise the full account
+    pub collateral_mint: UncheckedAccount<'info>,
+    /// CHECK: we only store the mint address; no need to deserialise the full account
+    pub debt_mint: UncheckedAccount<'info>,
 
     pub system_program: Program<'info, System>,
 }
 
-pub fn handler(
+pub fn handle_initiate(
     ctx: Context<InitiateRefinance>,
     source_protocol: u8,
     target_protocol: u8,

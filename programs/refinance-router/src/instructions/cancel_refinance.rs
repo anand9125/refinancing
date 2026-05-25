@@ -17,7 +17,7 @@ pub struct CancelRefinance<'info> {
     pub refinance_state: Account<'info, RefinanceState>,
 }
 
-pub fn handler(ctx: Context<CancelRefinance>) -> Result<()> {
+pub fn handle_cancel(ctx: Context<CancelRefinance>) -> Result<()> {
     let state = &ctx.accounts.refinance_state;
 
     msg!(

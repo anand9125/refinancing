@@ -2,7 +2,7 @@ import { PublicKey } from "@solana/web3.js";
 
 export const NETWORK = "devnet";
 export const RPC_ENDPOINT = "https://api.devnet.solana.com";
-export const PROGRAM_ID = new PublicKey("21FD2tKF2nG8TWdeQkm1PA5svKeE5fyqEtUPxg4khAsM");
+export const PROGRAM_ID = new PublicKey("fmq3QpAyqz9PcyZjHkp58ssJStx7Ujc9LPbCc5u6HZ8");
 
 // Devnet USDC mint (from spl-token-faucet.com)
 export const USDC_DEVNET_MINT = new PublicKey("Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr");

@@ -18,7 +18,7 @@ pub struct ConfirmStep<'info> {
 
 /// Advance the session to the next step.
 /// expected_step is the step we expect to be moving INTO (1, 2, or 3).
-pub fn handler(ctx: Context<ConfirmStep>, expected_step: u8) -> Result<()> {
+pub fn handle_confirm(ctx: Context<ConfirmStep>, expected_step: u8) -> Result<()> {
     let state = &mut ctx.accounts.refinance_state;
 
     // ensure we are advancing in order

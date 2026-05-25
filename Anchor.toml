@@ -6,17 +6,17 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-refinance_router = "21FD2tKF2nG8TWdeQkm1PA5svKeE5fyqEtUPxg4khAsM"
+refinance_router = "fmq3QpAyqz9PcyZjHkp58ssJStx7Ujc9LPbCc5u6HZ8"
 
 [programs.devnet]
-refinance_router = "21FD2tKF2nG8TWdeQkm1PA5svKeE5fyqEtUPxg4khAsM"
+refinance_router = "fmq3QpAyqz9PcyZjHkp58ssJStx7Ujc9LPbCc5u6HZ8"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "devnet"
+cluster = "localnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
-test = "npm run ts-mocha -p ./tsconfig.json -t 1000000 \"tests/**/*.ts\""
+test = "npx ts-mocha -p ./tsconfig.json -t 1000000 \"tests/**/*.ts\""
