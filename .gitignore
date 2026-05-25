@@ -1,0 +1,25 @@
+# Rust / Anchor
+target/
+.anchor/
+**/*.rs.bk
+
+# Node
+node_modules/
+app/node_modules/
+.next/
+app/.next/
+
+# Env
+.env
+.env.local
+.env*.local
+
+# Keys — never commit wallet keypairs
+**/*.json
+!tsconfig.json
+!package.json
+!package-lock.json
+!Anchor.toml
+
+# OS
+.DS_Store
