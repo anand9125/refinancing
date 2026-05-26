@@ -1,36 +1,75 @@
 @import "tailwindcss";
 
-:root {
-  --background: #0a0a0f;
-  --foreground: #ffffff;
+@theme inline {
+  --color-surface-0: #020814;
+  --color-surface-1: #0c1522;
+  --color-surface-2: #0a1220;
+  --color-surface-3: #0d1826;
+
+  --color-border-base: #172a3f;
+  --color-border-muted: #11243a;
+  --color-border-lit: #1e3048;
+
+  --color-text-bright: #f3f7fc;
+  --color-text-base: #e7edf4;
+  --color-text-dim: #8a9db5;
+  --color-text-muted: #5b7088;
+  --color-text-faint: #3e5470;
+
+  --color-accent: #1db67d;
+  --color-accent-soft: #25d28f;
+  --color-warn: #e5a93e;
+  --color-danger: #e5534b;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: #020814;
+  color: #e7edf4;
+  font-family: var(--font-dm-sans), system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
-/* Scrollbar */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+/* ── Typography helpers ───────────────────────────────────────────────────── */
+.font-num {
+  font-family: var(--font-ibm-plex-mono), "SF Mono", monospace;
+  font-variant-numeric: tabular-nums;
+}
+.font-ui {
+  font-family: var(--font-dm-sans), system-ui, sans-serif;
+}
 
-/* Toast slide-up */
+/* ── Sidebar CSS-only hover (no JS state) ─────────────────────────────────── */
+.sb-nav {
+  background: transparent;
+  border: 1px solid transparent;
+  transition: background 180ms ease, border-color 180ms ease;
+}
+.sb-nav:hover {
+  background: rgba(255,255,255,0.025);
+  border-color: rgba(255,255,255,0.04);
+}
+.sb-nav .sb-icon { color: #5e7389; transition: color 180ms ease; }
+.sb-nav:hover .sb-icon { color: #a4b6cc; }
+.sb-nav .sb-label { color: #6b7c90; transition: color 180ms ease; }
+.sb-nav:hover .sb-label { color: #c0cdd9; }
+
+/* ── Toast slide-up ───────────────────────────────────────────────────────── */
 @keyframes slide-up {
-  from { opacity: 0; transform: translateY(12px); }
+  from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-.animate-slide-up {
-  animation: slide-up 0.2s ease-out forwards;
-}
+.animate-slide-up { animation: slide-up 0.2s ease-out forwards; }
 
-/* Fade in */
-@keyframes fade-in {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+/* ── Scrollbar ────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.14); }
+
+/* ── Select pulse for refinance step feedback ─────────────────────────────── */
+@keyframes select-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(29,182,125,0.18); }
+  70%  { box-shadow: 0 0 0 6px rgba(29,182,125,0); }
+  100% { box-shadow: 0 0 0 0 rgba(29,182,125,0); }
 }
-.animate-fade-in {
-  animation: fade-in 0.3s ease-out forwards;
-}
+.select-pulse { animation: select-pulse 600ms ease-out 1; }
