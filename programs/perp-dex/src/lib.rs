@@ -84,4 +84,24 @@ pub mod perp_dex {
         ctx.accounts.process(withdraw_amount)?;
         Ok(())
     }
+
+    pub fn cancel_order_ix(ctx: Context<CancelOrderCtx>, cancel: state::CancelOrder) -> Result<()> {
+        ctx.accounts.process(cancel)?;
+        Ok(())
+    }
+
+    pub fn update_funding_ix(ctx: Context<UpdateFunding>) -> Result<()> {
+        ctx.accounts.process()?;
+        Ok(())
+    }
+
+    pub fn update_oracle_price(ctx: Context<UpdateOraclePrice>, price: i64, conf: u64) -> Result<()> {
+        ctx.accounts.process(price, conf)?;
+        Ok(())
+    }
+
+    pub fn toggle_trading(ctx: Context<ToggleTrading>, paused: bool) -> Result<()> {
+        ctx.accounts.process(paused)?;
+        Ok(())
+    }
 }

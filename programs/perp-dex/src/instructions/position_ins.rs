@@ -92,6 +92,24 @@ impl<'info> PositionIns<'info> {
                 continue;
             }
 
+            // Deduct taker fee before applying the fill
+            let taker_fee_bps = self.market.taker_fee_bps as i128;
+            let fee = (fill_event.fill_price as i128)
+                .checked_mul(fill_event.fill_qty as i128)
+                .and_then(|v| v.checked_mul(taker_fee_bps))
+                .and_then(|v| v.checked_div(10_000_i128))
+                .ok_or(PerpError::MathOverflow)?;
+
+            require!(
+                self.user_collateral.collateral_amount >= fee,
+                PerpError::InsufficientCollateral
+            );
+
+            self.user_collateral.collateral_amount = self.user_collateral
+                .collateral_amount
+                .checked_sub(fee)
+                .ok_or(PerpError::MathOverflow)?;
+
             PositionManager::apply_fill(
                 &mut self.market,
                 &mut self.user_position,

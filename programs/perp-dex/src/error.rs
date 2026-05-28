@@ -57,6 +57,8 @@ pub enum PerpError {
     #[msg("Event at head of queue is for another user")]
     EventNotForUser,
     #[msg("InvalidVaultQuoteMint ")]
-    InvalidVaultQuoteMint 
+    InvalidVaultQuoteMint,
+    #[msg("Trading is currently paused")]
+    TradingPaused,
 }
 

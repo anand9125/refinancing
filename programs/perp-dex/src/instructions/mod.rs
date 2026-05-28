@@ -30,3 +30,15 @@ pub use reset_queues::*;
 
 pub mod reset_slab;
 pub use reset_slab::*;
+
+pub mod cancel_order;
+pub use cancel_order::*;
+
+pub mod update_funding;
+pub use update_funding::*;
+
+pub mod update_oracle_price;
+pub use update_oracle_price::*;
+
+pub mod toggle_trading;
+pub use toggle_trading::*;
