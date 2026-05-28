@@ -1,5 +1,4 @@
-use std::{ ops::{Add}};
-use anchor_lang::{prelude::*,};
+use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
     token::{ Token},
@@ -69,9 +68,10 @@ impl <'info> PlaceOrder <'info>{
     let request_queues = &mut self.request_queue.load_mut()?;
     require!(request_queues.count<request_queues.capacity,PerpError::QueueFull);
 
+    // Use the current sequence as the order's unique suffix; let push() advance it.
     let seq = request_queues.sequence;
     let order_id = make_order_id(order.order_type , order.side , order.limit_price ,seq);
-    request_queues.sequence = seq.add(1);
+    // Do NOT manually increment sequence here — RequestQueue::push already does it.
 
     //initalise the posiotion 
     position.owner = self.user.key();

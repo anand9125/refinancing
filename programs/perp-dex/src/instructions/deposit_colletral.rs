@@ -5,7 +5,7 @@ use anchor_spl::{
     token::{ self, Mint, Token, TokenAccount, Transfer},
 };
 
-use crate::{GlobalConfig, PerpError, UserCollateral, request_queue};
+use crate::{GlobalConfig, PerpError, UserCollateral};
 
 #[derive(Accounts)]
 

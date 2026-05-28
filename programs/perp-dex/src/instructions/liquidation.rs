@@ -4,7 +4,7 @@ use anchor_spl::{
     token::{self, Mint, Token, TokenAccount, Transfer},
 };
 use crate::{
-    BidAsk, EventQueue, FUNDING_SCALE, GlobalConfig, MarketState, MatchingType, Order, OrderType, PerpError, Position, Ratio, RiskEngine, Side, UserCollateral, match_against_book,
+    BidAsk, DISCRIMINATOR_LEN, EventQueue, FUNDING_SCALE, GlobalConfig, MarketState, MatchingType, Order, OrderType, PerpError, Position, Ratio, RiskEngine, Side, UserCollateral, match_against_book,
 };
 
 #[derive(Accounts)]
@@ -169,12 +169,13 @@ impl<'info> Liquidation<'info> {
             market: market.key(),
         };
 
-        // Match against book / forced close remainder at mark 
+        // Match against book / forced close remainder at mark
         let (_remaining_qty, fills) = match liquidation_side {
             Side::Buy => {
                 let ask_account_info = &mut asks.to_account_info();
                 let mut ask_data = ask_account_info.try_borrow_mut_data()?;
-                let ask_bytes: &mut [u8] = &mut **ask_data;
+                // Skip the 8-byte Anchor discriminator before parsing the Slab.
+                let ask_bytes: &mut [u8] = &mut ask_data[DISCRIMINATOR_LEN..];
                 let ask_slab = &mut crate::Slab::from_bytes_mut(ask_bytes)?;
 
                 match_against_book(ask_slab, &taker_order, event_queue, MatchingType::Liquidation)?
@@ -182,7 +183,8 @@ impl<'info> Liquidation<'info> {
             Side::Sell => {
                 let bid_account_info = &mut bids.to_account_info();
                 let mut bid_data = bid_account_info.try_borrow_mut_data()?;
-                let bid_bytes: &mut [u8] = &mut **bid_data;
+                // Skip the 8-byte Anchor discriminator before parsing the Slab.
+                let bid_bytes: &mut [u8] = &mut bid_data[DISCRIMINATOR_LEN..];
                 let bid_slab = &mut crate::Slab::from_bytes_mut(bid_bytes)?;
 
                 match_against_book(bid_slab, &taker_order, event_queue, MatchingType::Liquidation)?

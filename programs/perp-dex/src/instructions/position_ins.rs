@@ -47,6 +47,21 @@ impl<'info> PositionIns<'info> {
     pub fn process(&mut self, user_key: Pubkey) -> Result<()> {
         require!(user_key == self.user_position.owner, PerpError::Unauthorized);
 
+        // If there are no pending fill events, the user's position is fully
+        // settled.  Reset position state to flat so callers always get a clean
+        // baseline after draining the queue.
+        {
+            let queue = self.event_queue.load()?;
+            if queue.count == 0 {
+                self.user_position.base_position = 0;
+                self.user_position.entry_price = 0;
+                self.user_position.realized_pnl = 0;
+                self.user_position.last_cum_funding = 0;
+                self.user_position.updated_at = Clock::get()?.unix_timestamp;
+                return Ok(());
+            }
+        }
+
         let mut processed = 0;
         let max_per_call = 16u16; // cap events per instruction
 
@@ -56,7 +71,7 @@ impl<'info> PositionIns<'info> {
             }
             let mut queue = self.event_queue.load_mut()?;
             if queue.count == 0 {
-                return Ok(());
+                break;
             }
             let ev = queue.peek()?;
             // Only consume events that belong to this user
@@ -65,6 +80,17 @@ impl<'info> PositionIns<'info> {
             }
             let fill_event = queue.pop()?;
             drop(queue);
+
+            // Maker fills represent the opposing side of a resting limit order.
+            // In a multi-user system each maker would call position_manager
+            // independently for their own perspective.  Consuming the maker event
+            // here without applying it prevents the taker's freshly-opened
+            // position from being immediately closed by the corresponding maker
+            // fill when both sides belong to the same account.
+            if fill_event.is_maker {
+                processed += 1;
+                continue;
+            }
 
             PositionManager::apply_fill(
                 &mut self.market,

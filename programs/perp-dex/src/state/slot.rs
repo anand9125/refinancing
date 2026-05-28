@@ -1,5 +1,4 @@
 use anchor_lang::prelude::*;
-use bytemuck::{Pod, Zeroable};
 
 pub const REQUEST_SLOT_LEN: usize = 128;     
 pub const EVENT_SLOT_LEN: usize = 128; 
