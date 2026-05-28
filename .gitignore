@@ -20,8 +20,12 @@ app/.next/
 !package.json
 !package-lock.json
 !Anchor.toml
+!app/src/idl/*.json
 
 # OS
 .DS_Store
 test-ledger/
 Cargo.lock
+
+# Track generated program IDL (overrides **/*.json)
+!app/src/idl/perp_dex.json
