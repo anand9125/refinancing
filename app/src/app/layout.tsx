@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { DM_Sans, IBM_Plex_Mono } from "next/font/google";
+import { Toaster } from "sonner";
 import { WalletProvider } from "@/components/WalletProvider";
 import "./globals.css";
 
@@ -16,8 +17,8 @@ const ibmPlexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SolLend — Solana Lending Aggregator",
-  description: "Unified dashboard for Kamino, MarginFi, and Solend positions on Solana devnet",
+  title: "Zenith — On-Chain Perpetuals",
+  description: "On-chain SOL-PERP perpetual futures terminal on Solana devnet",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -29,6 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     >
       <body suppressHydrationWarning>
         <WalletProvider>{children}</WalletProvider>
+        <Toaster theme="dark" position="bottom-right" richColors />
       </body>
     </html>
   );

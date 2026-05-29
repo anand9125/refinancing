@@ -1,75 +1,243 @@
 @import "tailwindcss";
 
-@theme inline {
-  --color-surface-0: #020814;
-  --color-surface-1: #0c1522;
-  --color-surface-2: #0a1220;
-  --color-surface-3: #0d1826;
+@theme {
+  --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-ibm-plex-mono), ui-monospace, monospace;
 
-  --color-border-base: #172a3f;
-  --color-border-muted: #11243a;
-  --color-border-lit: #1e3048;
+  /* Zenith hex tokens (per design spec) */
+  --color-background: #05070a;
+  --color-foreground: #f2f6fc;
+  --color-surface-1: #0a0e14;
+  --color-surface-2: #0e141c;
+  --color-surface-3: #131a24;
+  --color-text-bright: #f2f6fc;
+  --color-text-dim: #8a99ad;
+  --color-text-muted: #56657a;
+  --color-long: #1fcb7c;
+  --color-long-soft: rgba(31, 203, 124, 0.12);
+  --color-short: #f0616d;
+  --color-short-soft: rgba(240, 97, 109, 0.12);
+  --color-primary: #1fcb7c;
+  --color-border: rgba(255, 255, 255, 0.06);
+  --color-border-strong: rgba(255, 255, 255, 0.12);
 
-  --color-text-bright: #f3f7fc;
-  --color-text-base: #e7edf4;
-  --color-text-dim: #8a9db5;
-  --color-text-muted: #5b7088;
-  --color-text-faint: #3e5470;
+  /* Zenith radius scale */
+  --radius-sm2: 0.25rem;
+  --radius-md2: 0.375rem;
+  --radius-md4: 0.375rem;
+  --radius-lg6: 0.5rem;
+  --radius-xl8: 0.75rem;
+}
 
-  --color-accent: #1db67d;
-  --color-accent-soft: #25d28f;
-  --color-warn: #e5a93e;
-  --color-danger: #e5534b;
+/*
+ * Zenith HSL custom properties.
+ * These mirror the original Zenith design system so that ported markup
+ * using `hsl(var(--surface-2))`, `rounded-md4`, etc. renders identically.
+ */
+:root {
+  --background: 218 39% 3%; /* #05070a */
+  --foreground: 213 56% 97%; /* #f2f6fc */
+  --surface-1: 213 33% 6%; /* #0a0e14 */
+  --surface-2: 212 32% 8%; /* #0e141c */
+  --surface-3: 212 31% 11%; /* #131a24 */
+  --text-bright: 213 56% 97%;
+  --text-dim: 213 18% 61%; /* #8a99ad */
+  --text-muted: 213 18% 40%; /* #56657a */
+  --long: 152 73% 46%; /* #1fcb7c */
+  --long-soft: 152 73% 46% / 0.12;
+  --short: 354 82% 66%; /* #f0616d */
+  --short-soft: 354 82% 66% / 0.12;
+  --primary: 152 73% 46%;
+  --border: 0 0% 100% / 0.06;
+  --border-strong: 0 0% 100% / 0.12;
 }
 
 body {
-  background: #020814;
-  color: #e7edf4;
-  font-family: var(--font-dm-sans), system-ui, -apple-system, sans-serif;
-  -webkit-font-smoothing: antialiased;
+  background: #05070a;
+  color: #f2f6fc;
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
 }
 
-/* ── Typography helpers ───────────────────────────────────────────────────── */
+/* --- Zenith utilities --- */
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.micro-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-family: var(--font-mono);
+  color: #56657a;
+}
+.text-bright {
+  color: #f2f6fc;
+}
+.text-dim {
+  color: #8a99ad;
+}
+.text-muted {
+  color: #56657a;
+}
+.text-long {
+  color: #1fcb7c;
+}
+.text-short {
+  color: #f0616d;
+}
+.surface-1 {
+  background: #0a0e14;
+}
+.surface-2 {
+  background: #0e141c;
+}
+.surface-3 {
+  background: #131a24;
+}
+.hairline {
+  border-color: rgba(255, 255, 255, 0.06);
+}
+.tick-up {
+  animation: tickUp 0.4s ease;
+}
+.tick-down {
+  animation: tickDown 0.4s ease;
+}
+@keyframes tickUp {
+  0% {
+    color: #1fcb7c;
+  }
+  100% {
+    color: #f2f6fc;
+  }
+}
+@keyframes tickDown {
+  0% {
+    color: #f0616d;
+  }
+  100% {
+    color: #f2f6fc;
+  }
+}
+
+/* radius helpers used by ported markup */
+.rounded-sm2 {
+  border-radius: 0.25rem;
+}
+.rounded-md2 {
+  border-radius: 0.375rem;
+}
+.rounded-md4 {
+  border-radius: 0.375rem;
+}
+.rounded-lg6 {
+  border-radius: 0.5rem;
+}
+.rounded-xl8 {
+  border-radius: 0.75rem;
+}
+
+/* existing utilities used by sidebar/wallet (kept working) */
 .font-num {
-  font-family: var(--font-ibm-plex-mono), "SF Mono", monospace;
+  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
 .font-ui {
-  font-family: var(--font-dm-sans), system-ui, sans-serif;
+  font-family: var(--font-sans);
 }
 
-/* ── Sidebar CSS-only hover (no JS state) ─────────────────────────────────── */
-.sb-nav {
-  background: transparent;
-  border: 1px solid transparent;
-  transition: background 180ms ease, border-color 180ms ease;
+/* slider styling for the leverage control */
+input[type="range"].zenith-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 9999px;
+  background: #131a24;
+  outline: none;
 }
-.sb-nav:hover {
-  background: rgba(255,255,255,0.025);
-  border-color: rgba(255,255,255,0.04);
+input[type="range"].zenith-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  background: #1fcb7c;
+  cursor: pointer;
+  border: 2px solid #05070a;
 }
-.sb-nav .sb-icon { color: #5e7389; transition: color 180ms ease; }
-.sb-nav:hover .sb-icon { color: #a4b6cc; }
-.sb-nav .sb-label { color: #6b7c90; transition: color 180ms ease; }
-.sb-nav:hover .sb-label { color: #c0cdd9; }
+input[type="range"].zenith-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  background: #1fcb7c;
+  cursor: pointer;
+  border: 2px solid #05070a;
+}
 
-/* ── Toast slide-up ───────────────────────────────────────────────────────── */
-@keyframes slide-up {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0); }
+/* ════════════════════════════════════════════════════════════════════════
+   Zenith terminal design tokens + utilities (ported from Zenith styles.css)
+   Coexists with the original SolLend tokens above.
+   ════════════════════════════════════════════════════════════════════════ */
+@theme {
+  --color-z-background: #05070a;
+  --color-z-foreground: #f2f6fc;
+  --color-z-surface-1: #0a0e14;
+  --color-z-surface-2: #0e141c;
+  --color-z-surface-3: #131a24;
+  --color-z-long: #1fcb7c;
+  --color-z-short: #f0616d;
+  --color-z-primary: #1fcb7c;
 }
-.animate-slide-up { animation: slide-up 0.2s ease-out forwards; }
 
-/* ── Scrollbar ────────────────────────────────────────────────────────────── */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.14); }
-
-/* ── Select pulse for refinance step feedback ─────────────────────────────── */
-@keyframes select-pulse {
-  0%   { box-shadow: 0 0 0 0 rgba(29,182,125,0.18); }
-  70%  { box-shadow: 0 0 0 6px rgba(29,182,125,0); }
-  100% { box-shadow: 0 0 0 0 rgba(29,182,125,0); }
+:root {
+  --background: 218 39% 3%;
+  --foreground: 213 56% 97%;
+  --surface-1: 213 33% 6%;
+  --surface-2: 212 32% 8%;
+  --surface-3: 212 31% 11%;
+  --text-bright: 213 56% 97%;
+  --text-dim: 213 18% 61%;
+  --text-muted: 213 18% 40%;
+  --long: 152 73% 46%;
+  --long-soft: 152 73% 46% / 0.12;
+  --short: 354 82% 66%;
+  --short-soft: 354 82% 66% / 0.12;
+  --primary: 152 73% 46%;
+  --border: 0 0% 100% / 0.06;
+  --border-strong: 0 0% 100% / 0.12;
 }
-.select-pulse { animation: select-pulse 600ms ease-out 1; }
+
+body {
+  background: #05070a;
+  color: #f2f6fc;
+  font-variant-numeric: tabular-nums;
+}
+
+.mono { font-family: var(--font-ibm-plex-mono), ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+.micro-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; font-family: var(--font-ibm-plex-mono), ui-monospace, monospace; color: #56657a; }
+.text-bright { color: #f2f6fc; }
+.text-dim { color: #8a99ad; }
+.text-muted { color: #56657a; }
+.text-long { color: #1fcb7c; }
+.text-short { color: #f0616d; }
+.surface-1 { background: #0a0e14; }
+.surface-2 { background: #0e141c; }
+.surface-3 { background: #131a24; }
+.hairline { border-color: rgba(255,255,255,0.06); }
+
+.tick-up { animation: tickUp 0.4s ease; }
+.tick-down { animation: tickDown 0.4s ease; }
+@keyframes tickUp { 0% { color: #1fcb7c; } 100% { color: #f2f6fc; } }
+@keyframes tickDown { 0% { color: #f0616d; } 100% { color: #f2f6fc; } }
+
+.rounded-sm2 { border-radius: 0.25rem; }
+.rounded-md2 { border-radius: 0.375rem; }
+.rounded-md4 { border-radius: 0.375rem; }
+.rounded-lg6 { border-radius: 0.5rem; }
+.rounded-xl8 { border-radius: 0.75rem; }
+
+input[type="range"].zenith-slider { -webkit-appearance: none; appearance: none; width: 100%; height: 4px; border-radius: 9999px; background: #131a24; outline: none; }
+input[type="range"].zenith-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 14px; height: 14px; border-radius: 9999px; background: #1fcb7c; cursor: pointer; border: 2px solid #05070a; }
+input[type="range"].zenith-slider::-moz-range-thumb { width: 14px; height: 14px; border-radius: 9999px; background: #1fcb7c; cursor: pointer; border: 2px solid #05070a; }
