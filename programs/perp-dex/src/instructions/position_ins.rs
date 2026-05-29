@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use crate::{
-    EventQueue,  MarketState, PerpError,
+    EventQueue, MarketState, PerpError,
     Position, PositionManager, UserCollateral
 };
 use anchor_spl::token::Token;
@@ -73,21 +73,18 @@ impl<'info> PositionIns<'info> {
             if queue.count == 0 {
                 break;
             }
-            let ev = queue.peek()?;
-            // Only consume events that belong to this user
-            if ev.user != user_key.to_bytes() {
-                return Err(error!(PerpError::EventNotForUser));
-            }
             let fill_event = queue.pop()?;
             drop(queue);
 
-            // Maker fills represent the opposing side of a resting limit order.
-            // In a multi-user system each maker would call position_manager
-            // independently for their own perspective.  Consuming the maker event
-            // here without applying it prevents the taker's freshly-opened
-            // position from being immediately closed by the corresponding maker
-            // fill when both sides belong to the same account.
-            if fill_event.is_maker {
+            // The event queue is a single global FIFO shared by all traders, so
+            // the head may belong to a counterparty. Pop and skip anything that
+            // isn't a taker fill for this user:
+            //   - events for a different user are left for that user to settle
+            //     (here we simply discard them from this user's perspective), and
+            //   - maker fills are skipped so the taker's freshly-opened position
+            //     isn't immediately closed by the matching maker fill when both
+            //     sides belong to the same account.
+            if fill_event.is_maker || fill_event.user != user_key.to_bytes() {
                 processed += 1;
                 continue;
             }

@@ -16,7 +16,7 @@ pub use engine::*;
 pub use event::*;
 pub use instructions::*;
 
-declare_id!("81dJfLhAbLPYQKbEHskyLvQdzbQffJzG9tVVfFRhpZ6p");
+declare_id!("89zv4vQvHqPRsYfbyoR7Q65TgoV2XpZZM3QrBT4VCvde");
 
 #[program]
 pub mod perp_dex {

@@ -1,26 +1,30 @@
 /**
  * Client-side reader for the on-chain crit-bit slab orderbook.
  *
- * Mirrors the Rust layout in `programs/perp-dex/src/state/slab.rs`:
- *   SlabHeader (40 bytes): bump_index u64, free_head u64, root u64,
- *                          leaf_count u64, _pad u64
- *   SlabNode  (80 bytes):  tag u32, prefix_len u32, key u128,
- *                          owner [u8;32], quantity u64, ...
+ * Layout from `programs/perp-dex/src/state/slab.rs` (+ constants.rs):
+ *   SlabHeader (32 bytes): leaf_count u64, bump_index u64,
+ *                          free_list_head u64, root u64
+ *   Node (88 bytes, repr C union). LeafNode variant:
+ *     tag u32 @0, fee_tier u8 + reserved[11] @4, key u128 @16,
+ *     owner [u8;32] @32, quantity u64 @64, timestamp i64 @72
  *
- * Leaf nodes (tag === 2) carry a resting order. The price is the high 64 bits
- * of the u128 key; quantity is the remaining base size.
+ * The price is the high 64 bits of the u128 key. Nodes are allocated from a
+ * free list (bump_index can stay 0), so we scan every slot and filter on the
+ * LEAF tag rather than trusting a node count.
  */
 
 const DISCRIMINATOR = 8;
-const HEADER_SIZE = 40;
-const NODE_SIZE = 80;
+const HEADER_SIZE = 32;
+// LeafNode is repr(C, align(16)); its 88 logical bytes round up to a 96-byte
+// stride in the slab's node array.
+const NODE_SIZE = 96;
 
-const LEAF_TAG = 2;
+const LEAF_TAG = 2; // INNER=1, LEAF=2, FREE=3
 
-// Field offsets within a node
-const OFF_TAG = 0;
-const OFF_KEY = 8; // u128 (16 bytes)
-const OFF_QTY = 72; // u64 after [u8;32] owner at 40..72
+// LeafNode field offsets within a node
+const OFF_TAG = 0; // u32
+const OFF_KEY_HI = 24; // high 64 bits of key u128 (key @16, +8)
+const OFF_QTY = 64; // u64
 
 export interface SlabLevel {
   price: bigint;
@@ -34,12 +38,6 @@ export interface OrderbookSide {
 
 function readU64(view: DataView, offset: number): bigint {
   return view.getBigUint64(offset, true);
-}
-
-function readU128(view: DataView, offset: number): bigint {
-  const lo = view.getBigUint64(offset, true);
-  const hi = view.getBigUint64(offset + 8, true);
-  return (hi << 64n) | lo;
 }
 
 /**
@@ -56,27 +54,20 @@ export function readSlab(data: Uint8Array, descending: boolean): OrderbookSide {
   const buf = data.subarray(DISCRIMINATOR);
   const view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
 
-  const bumpIndex = Number(readU64(view, 0)); // nodes ever allocated
-  const leafCount = Number(readU64(view, 24));
+  const leafCount = Number(readU64(view, 0));
+  const slots = Math.floor((buf.byteLength - HEADER_SIZE) / NODE_SIZE);
 
   const byPrice = new Map<bigint, bigint>();
 
-  const nodeCount = Math.min(
-    bumpIndex,
-    Math.floor((buf.byteLength - HEADER_SIZE) / NODE_SIZE)
-  );
+  for (let i = 0; i < slots; i++) {
+    const base = HEADER_SIZE + i * NODE_SIZE;
+    if (view.getUint32(base + OFF_TAG, true) !== LEAF_TAG) continue;
 
-  for (let i = 0; i < nodeCount; i++) {
-    const nodeBase = HEADER_SIZE + i * NODE_SIZE;
-    const tag = view.getUint32(nodeBase + OFF_TAG, true);
-    if (tag !== LEAF_TAG) continue;
-
-    const key = readU128(view, nodeBase + OFF_KEY);
-    const lvlPrice = key >> 64n;
-    const qty = readU64(view, nodeBase + OFF_QTY);
+    const price = readU64(view, base + OFF_KEY_HI);
+    const qty = readU64(view, base + OFF_QTY);
     if (qty === 0n) continue;
 
-    byPrice.set(lvlPrice, (byPrice.get(lvlPrice) ?? 0n) + qty);
+    byPrice.set(price, (byPrice.get(price) ?? 0n) + qty);
   }
 
   const levels: SlabLevel[] = Array.from(byPrice.entries()).map(

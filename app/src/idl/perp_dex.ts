@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/perp_dex.json`.
  */
 export type PerpDex = {
-  "address": "81dJfLhAbLPYQKbEHskyLvQdzbQffJzG9tVVfFRhpZ6p",
+  "address": "89zv4vQvHqPRsYfbyoR7Q65TgoV2XpZZM3QrBT4VCvde",
   "metadata": {
     "name": "perpDex",
     "version": "0.1.0",

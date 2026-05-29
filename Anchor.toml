@@ -1,16 +1,19 @@
 [toolchain]
-package_manager = "yarn"
 anchor_version = "0.31.1"
+package_manager = "yarn"
 
 [features]
 resolution = true
 skip-lint = false
 
+[programs.devnet]
+perp_dex = "89zv4vQvHqPRsYfbyoR7Q65TgoV2XpZZM3QrBT4VCvde"
+
 [programs.localnet]
 perp_dex = "81dJfLhAbLPYQKbEHskyLvQdzbQffJzG9tVVfFRhpZ6p"
 
-[programs.devnet]
-perp_dex = "81dJfLhAbLPYQKbEHskyLvQdzbQffJzG9tVVfFRhpZ6p"
+[registry]
+url = "https://api.apr.dev"
 
 [provider]
 cluster = "localnet"
