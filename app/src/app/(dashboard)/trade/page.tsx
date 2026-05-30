@@ -17,11 +17,11 @@ export default function TradePage() {
 
       <div className="grid grid-cols-1 gap-px bg-[rgba(255,255,255,0.06)] lg:grid-cols-[1fr_minmax(360px,400px)]">
         {/* Left column: chart + positions */}
-        <div className="flex flex-col gap-px bg-[rgba(255,255,255,0.06)]">
-          <div className="surface-1 h-[420px]">
+        <div className="flex min-h-0 flex-col gap-px bg-[rgba(255,255,255,0.06)]">
+          <div className="surface-1 h-[420px] shrink-0">
             <CandlestickChart />
           </div>
-          <div className="surface-1 min-h-[240px]">
+          <div className="surface-1 min-h-[240px] flex-1">
             <PositionsPanel />
           </div>
         </div>
