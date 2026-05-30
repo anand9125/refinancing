@@ -1,9 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useReadProgram } from "./useProgram";
-import { marketPda } from "@/lib/pda";
-import { MARKET_SYMBOL } from "@/lib/constants";
+import { MARKET_PARAMS } from "@/lib/anchor";
 
 export interface MarketData {
   symbol: string;
@@ -23,44 +21,41 @@ export interface MarketData {
   minOrderNotional: number;
 }
 
-const POLL_MS = 5000;
+function buildMarket(): MarketData {
+  const now = Math.floor(Date.now() / 1000);
+  // align lastFundingTs to the start of the current funding interval
+  const interval = MARKET_PARAMS.fundingIntervalSecs;
+  const lastFundingTs = now - (now % interval);
+  return {
+    symbol: MARKET_PARAMS.symbol,
+    oraclePrice: MARKET_PARAMS.oraclePrice,
+    imBps: MARKET_PARAMS.imBps,
+    mmBps: MARKET_PARAMS.mmBps,
+    takerFeeBps: MARKET_PARAMS.takerFeeBps,
+    makerFeeBps: MARKET_PARAMS.makerFeeBps,
+    liqPenaltyBps: MARKET_PARAMS.liqPenaltyBps,
+    oracleBandBps: MARKET_PARAMS.oracleBandBps,
+    cumFunding: MARKET_PARAMS.cumFunding,
+    lastFundingTs,
+    maxFundingRate: MARKET_PARAMS.maxFundingRate,
+    fundingIntervalSecs: interval,
+    tickSize: MARKET_PARAMS.tickSize,
+    stepSize: MARKET_PARAMS.stepSize,
+    minOrderNotional: MARKET_PARAMS.minOrderNotional,
+  };
+}
 
-export function useMarket(symbol: string = MARKET_SYMBOL) {
-  const program = useReadProgram();
+export function useMarket() {
   const [market, setMarket] = useState<MarketData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const refresh = useCallback(async () => {
-    try {
-      const acc = await program.account.marketState.fetch(marketPda(symbol));
-      setMarket({
-        symbol: acc.symbol,
-        oraclePrice: acc.lastOraclePrice.toNumber(),
-        imBps: Number(acc.imBps),
-        mmBps: Number(acc.mmBps),
-        takerFeeBps: Number(acc.takerFeeBps),
-        makerFeeBps: Number(acc.makerFeeBps),
-        liqPenaltyBps: Number(acc.liqPenaltyBps),
-        oracleBandBps: Number(acc.oracleBandBps),
-        cumFunding: acc.cumFunding.toNumber(),
-        lastFundingTs: acc.lastFundingTs.toNumber(),
-        maxFundingRate: acc.maxFundingRate.toNumber(),
-        fundingIntervalSecs: Number(acc.fundingIntervalSecs),
-        tickSize: Number(acc.tickSize),
-        stepSize: Number(acc.stepSize),
-        minOrderNotional: acc.minOrderNotional.toNumber(),
-      });
-    } catch {
-      setMarket(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [program, symbol]);
+  const refresh = useCallback(() => {
+    setMarket(buildMarket());
+    setLoading(false);
+  }, []);
 
   useEffect(() => {
-    void refresh();
-    const id = setInterval(() => void refresh(), POLL_MS);
-    return () => clearInterval(id);
+    refresh();
   }, [refresh]);
 
   return { market, loading, refresh };

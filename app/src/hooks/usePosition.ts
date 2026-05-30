@@ -1,16 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useReadProgram } from "./useProgram";
 import { useConnectedWallet } from "@/components/wallet/useConnectedWallet";
-import { positionPda } from "@/lib/pda";
-import { MARKET_SYMBOL } from "@/lib/constants";
-
-export type PositionSide = "long" | "short" | "flat";
+import { readState, subscribe } from "@/lib/localState";
 
 export interface PositionData {
   basePosition: number;
-  side: PositionSide;
+  side: "long" | "short" | "flat";
   entryPrice: number;
   realizedPnl: number;
   initialMargin: number;
@@ -18,46 +14,37 @@ export interface PositionData {
   updatedAt: number;
 }
 
-const POLL_MS = 5000;
-
-export function usePosition(symbol: string = MARKET_SYMBOL) {
-  const program = useReadProgram();
-  const { publicKey } = useConnectedWallet();
+export function usePosition() {
+  const { address } = useConnectedWallet();
   const [position, setPosition] = useState<PositionData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const refresh = useCallback(async () => {
-    if (!publicKey) {
+  const refresh = useCallback(() => {
+    if (!address) {
       setPosition(null);
       setLoading(false);
       return;
     }
-    try {
-      const acc = await program.account.position.fetch(
-        positionPda(symbol, publicKey)
-      );
-      const base = acc.basePosition.toNumber();
-      const side: PositionSide = base > 0 ? "long" : base < 0 ? "short" : "flat";
-      setPosition({
-        basePosition: base,
-        side,
-        entryPrice: acc.entryPrice.toNumber(),
-        realizedPnl: acc.realizedPnl.toNumber(),
-        initialMargin: acc.initialMargin.toNumber(),
-        leverage: Number(acc.leverage),
-        updatedAt: acc.updatedAt.toNumber(),
-      });
-    } catch {
+    const s = readState(address);
+    if (s.basePosition === 0) {
       setPosition(null);
-    } finally {
-      setLoading(false);
+    } else {
+      setPosition({
+        basePosition: s.basePosition,
+        side: s.basePosition > 0 ? "long" : "short",
+        entryPrice: s.entryPrice,
+        realizedPnl: s.realizedPnl,
+        initialMargin: s.initialMargin,
+        leverage: s.leverage,
+        updatedAt: s.positionUpdatedAt,
+      });
     }
-  }, [program, publicKey, symbol]);
+    setLoading(false);
+  }, [address]);
 
   useEffect(() => {
-    void refresh();
-    const id = setInterval(() => void refresh(), POLL_MS);
-    return () => clearInterval(id);
+    refresh();
+    return subscribe(refresh);
   }, [refresh]);
 
   return { position, loading, refresh };
