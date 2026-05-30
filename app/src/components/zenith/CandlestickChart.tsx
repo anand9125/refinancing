@@ -52,7 +52,9 @@ export function CandlestickChart() {
   const lastSampleLen = useRef(0);
 
   useEffect(() => {
-    const ref = oracle ?? market?.oraclePrice ?? null;
+    // Seed strictly from the Pyth price so the whole chart shares one scale.
+    // (Mixing the on-chain mark ~150 with live Pyth ~82 collapses autoscale.)
+    const ref = oracle;
     if (ref === null || ref <= 0) return;
     if (!seeded.current) {
       seeded.current = true;
