@@ -1,33 +1,49 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useReadProgram } from "./useProgram";
 import { useConnectedWallet } from "@/components/wallet/useConnectedWallet";
-import { readState, subscribe } from "@/lib/localState";
+import { userCollateralPda } from "@/lib/pda";
+import { fromQuote } from "@/lib/format";
 
 export interface CollateralData {
-  amount: number; // human USDC
+  amount: number;
   lastUpdated: number;
 }
 
+const POLL_MS = 5000;
+
 export function useCollateral() {
-  const { address } = useConnectedWallet();
+  const program = useReadProgram();
+  const { publicKey } = useConnectedWallet();
   const [collateral, setCollateral] = useState<CollateralData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const refresh = useCallback(() => {
-    if (!address) {
+  const refresh = useCallback(async () => {
+    if (!publicKey) {
       setCollateral(null);
       setLoading(false);
       return;
     }
-    const s = readState(address);
-    setCollateral({ amount: s.collateral, lastUpdated: s.collateralUpdatedAt });
-    setLoading(false);
-  }, [address]);
+    try {
+      const acc = await program.account.userCollateral.fetch(
+        userCollateralPda(publicKey)
+      );
+      setCollateral({
+        amount: fromQuote(acc.collateralAmount.toString()),
+        lastUpdated: acc.lastUpdated.toNumber(),
+      });
+    } catch {
+      setCollateral(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [program, publicKey]);
 
   useEffect(() => {
-    refresh();
-    return subscribe(refresh);
+    void refresh();
+    const id = setInterval(() => void refresh(), POLL_MS);
+    return () => clearInterval(id);
   }, [refresh]);
 
   return { collateral, loading, refresh };

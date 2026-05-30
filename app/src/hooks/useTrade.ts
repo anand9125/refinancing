@@ -1,50 +1,120 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { BN } from "@coral-xyz/anchor";
+import { useProgram } from "./useProgram";
 import { useConnectedWallet } from "@/components/wallet/useConnectedWallet";
-import { applyFill } from "@/lib/localState";
-import { MARKET_PARAMS } from "@/lib/anchor";
+import {
+  globalConfigPda,
+  marketPda,
+  bidsPda,
+  asksPda,
+  userCollateralPda,
+  positionPda,
+  requestQueuePda,
+  eventQueuePda,
+} from "@/lib/pda";
+import { MARKET_SYMBOL } from "@/lib/constants";
 
-export interface TradeParams {
-  side: "buy" | "sell";
-  kind: "market" | "limit";
+export type Side = "buy" | "sell";
+export type OrderKind = "market" | "limit";
+
+export interface PlaceParams {
+  side: Side;
+  kind: OrderKind;
   qty: number;
   limitPrice: number;
   leverage: number;
   imBps: number;
 }
 
-export function useTrade() {
-  const { address } = useConnectedWallet();
+export function useTrade(symbol: string = MARKET_SYMBOL) {
+  const program = useProgram();
+  const { publicKey } = useConnectedWallet();
   const [busy, setBusy] = useState(false);
 
   const place = useCallback(
-    async (p: TradeParams): Promise<string> => {
-      if (!address) throw new Error("Wallet not connected");
-      if (!(p.qty > 0)) throw new Error("Invalid size");
+    async (p: PlaceParams): Promise<string> => {
+      if (!program || !publicKey) {
+        throw new Error("Connect your wallet to trade");
+      }
+
       setBusy(true);
       try {
-        // submit fill to the market; market orders fill at oracle mark
-        const fillPrice =
-          p.kind === "market" ? MARKET_PARAMS.oraclePrice : p.limitPrice;
-        if (!(fillPrice > 0)) throw new Error("Invalid price");
-        // simulate confirmation latency
-        await new Promise((r) => setTimeout(r, 450));
-        applyFill(address, {
-          side: p.side,
-          kind: p.kind,
-          qty: p.qty,
-          price: fillPrice,
+        const market = marketPda(symbol);
+        const userColletral = userCollateralPda(publicKey);
+        const positionPerMarket = positionPda(symbol, publicKey);
+        const globalConfig = globalConfigPda();
+        const requestQueue = requestQueuePda();
+        const eventQueue = eventQueuePda();
+        const bids = bidsPda(symbol);
+        const asks = asksPda(symbol);
+
+        const side = p.side === "buy" ? { buy: {} } : { sell: {} };
+        const orderType =
+          p.kind === "limit" ? { limit: {} } : { market: {} };
+
+        const qty = new BN(p.qty);
+        const priceRef = new BN(p.limitPrice || 1);
+        const limitPrice = new BN(p.limitPrice);
+        const initialMargin = qty
+          .mul(priceRef)
+          .muln(p.imBps)
+          .divn(10000);
+
+        const order = {
+          user: Array.from(publicKey.toBytes()),
+          orderId: new BN(0),
+          side,
+          qty,
+          orderType,
+          limitPrice,
+          initialMargin,
           leverage: p.leverage,
-          takerFeeBps: MARKET_PARAMS.takerFeeBps,
-        });
-        // synthetic confirmation signature for UI display
-        return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+          market,
+        };
+
+        const sig = await program.methods
+          .placeOrder(order)
+          .accountsPartial({
+            user: publicKey,
+            globalConfig,
+            market,
+            userColletral,
+            positionPerMarket,
+            requestQueue,
+          })
+          .rpc();
+
+        await program.methods
+          .processPlaceOrder()
+          .accountsPartial({
+            authority: publicKey,
+            market,
+            bids,
+            asks,
+            requestQueue,
+            eventQueue,
+          })
+          .rpc();
+
+        await program.methods
+          .positionManager(publicKey)
+          .accountsPartial({
+            market,
+            userPosition: positionPerMarket,
+            eventQueue,
+            userCollateral: userColletral,
+          })
+          .rpc()
+          .catch(() => {});
+
+        return sig;
       } finally {
         setBusy(false);
       }
     },
-    [address],
+    [program, publicKey, symbol]
   );
 
   return { place, busy };
