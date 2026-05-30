@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useOraclePrice } from "@/hooks/useOraclePrice";
 import { useMarket } from "@/hooks/useMarket";
 import { price as fmtPrice } from "@/lib/format";
@@ -14,20 +14,31 @@ interface Candle {
   close: number;
 }
 
-// Group rolling Pyth samples into pseudo-candles (N samples per candle).
-function toCandles(history: number[], group = 3): Candle[] {
-  const candles: Candle[] = [];
-  for (let i = 0; i < history.length; i += group) {
-    const slice = history.slice(i, i + group);
-    if (slice.length === 0) continue;
-    candles.push({
-      open: slice[0],
-      close: slice[slice.length - 1],
-      high: Math.max(...slice),
-      low: Math.min(...slice),
-    });
+const SEED_COUNT = 60;
+const MAX_CANDLES = 80;
+
+/**
+ * Deterministic seeded history so SSR + re-renders are stable (NO Math.random /
+ * Date.now). Uses an index-based sine "hash" for the noise term, producing a
+ * realistic-looking sine + noise walk centered on the current price.
+ */
+function buildSeed(base: number): Candle[] {
+  const out: Candle[] = [];
+  let prevClose = base * 0.992;
+  for (let i = 0; i < SEED_COUNT; i++) {
+    const drift = Math.sin(i / 7) * base * 0.012;
+    const n = Math.sin(i * 12.9898) * 43758.5453;
+    const jitter = (n - Math.floor(n) - 0.5) * base * 0.01;
+    const open = prevClose;
+    const close = base + drift + jitter;
+    const wickUp = Math.abs(Math.sin(i * 3.1)) * base * 0.004;
+    const wickDn = Math.abs(Math.cos(i * 2.3)) * base * 0.004;
+    const high = Math.max(open, close) + wickUp;
+    const low = Math.min(open, close) - wickDn;
+    out.push({ open, high, low, close });
+    prevClose = close;
   }
-  return candles;
+  return out;
 }
 
 export function CandlestickChart() {
@@ -35,16 +46,61 @@ export function CandlestickChart() {
   const { market } = useMarket();
   const [interval, setInterval] = useState("15m");
 
-  const candles = useMemo(() => toCandles(history), [history]);
+  // Seed the chart once we have a reference price, then append live Pyth samples.
+  const [candles, setCandles] = useState<Candle[]>([]);
+  const seeded = useRef(false);
+  const lastSampleLen = useRef(0);
 
-  const { min, max, range } = useMemo(() => {
+  useEffect(() => {
+    const ref = oracle ?? market?.oraclePrice ?? null;
+    if (ref === null || ref <= 0) return;
+    if (!seeded.current) {
+      seeded.current = true;
+      const seed = buildSeed(ref);
+      const tail = seed[seed.length - 1];
+      seed[seed.length - 1] = {
+        ...tail,
+        close: ref,
+        high: Math.max(tail.high, ref),
+        low: Math.min(tail.low, ref),
+      };
+      setCandles(seed);
+    }
+  }, [oracle, market]);
+
+  // Append each NEW live Pyth sample as a fresh candle on the right edge.
+  useEffect(() => {
+    if (!seeded.current) return;
+    if (history.length <= lastSampleLen.current) return;
+    const fresh = history.slice(lastSampleLen.current);
+    lastSampleLen.current = history.length;
+    setCandles((prev) => {
+      let next = prev;
+      for (const sample of fresh) {
+        const last = next[next.length - 1];
+        const open = last ? last.close : sample;
+        next = [
+          ...next,
+          {
+            open,
+            close: sample,
+            high: Math.max(open, sample),
+            low: Math.min(open, sample),
+          },
+        ];
+      }
+      return next.slice(-MAX_CANDLES);
+    });
+  }, [history]);
+
+  const { min, range } = useMemo(() => {
     if (candles.length === 0) {
       const m = oracle ?? market?.oraclePrice ?? 0;
-      return { min: m * 0.99, max: m * 1.01, range: m * 0.02 || 1 };
+      return { min: m * 0.99, range: m * 0.02 || 1 };
     }
     const max = Math.max(...candles.map((c) => c.high));
     const min = Math.min(...candles.map((c) => c.low));
-    return { min, max, range: max - min || 1 };
+    return { min, range: max - min || 1 };
   }, [candles, oracle, market]);
 
   const W = 1000;
@@ -56,7 +112,8 @@ export function CandlestickChart() {
   const innerW = W - padRight;
   const n = Math.max(candles.length, 1);
   const cw = innerW / n;
-  const bodyW = Math.max(2, cw * 0.62);
+  // Thin candles: body capped so few-candle states are NOT giant blocks.
+  const bodyW = Math.min(cw * 0.6, 8);
 
   const y = (v: number) => padTop + (1 - (v - min) / range) * innerH;
 
@@ -66,7 +123,9 @@ export function CandlestickChart() {
     return { v, yy: y(v) };
   });
 
-  const last = candles.length > 0 ? candles[candles.length - 1].close : oracle;
+  const lastCandle = candles.length > 0 ? candles[candles.length - 1] : null;
+  const last = lastCandle ? lastCandle.close : oracle;
+  const lastUp = lastCandle ? lastCandle.close >= lastCandle.open : true;
 
   return (
     <div className="surface-2 flex h-full flex-col">
@@ -85,10 +144,15 @@ export function CandlestickChart() {
           ))}
         </div>
         <div className="mono flex items-center gap-3 text-[11px] text-muted">
-          <span>SOL/USD · Pyth</span>
-          {last !== null && (
-            <span className="text-bright">{fmtPrice(last, 2)}</span>
+          {lastCandle && (
+            <span className="flex gap-2 tabular-nums">
+              <span>O <span className="text-dim">{fmtPrice(lastCandle.open, 2)}</span></span>
+              <span>H <span className="text-dim">{fmtPrice(lastCandle.high, 2)}</span></span>
+              <span>L <span className="text-dim">{fmtPrice(lastCandle.low, 2)}</span></span>
+              <span>C <span style={{ color: lastUp ? "#1fcb7c" : "#f0616d" }}>{fmtPrice(lastCandle.close, 2)}</span></span>
+            </span>
           )}
+          <span>SOL/USD · Pyth</span>
         </div>
       </div>
 
@@ -128,6 +192,7 @@ export function CandlestickChart() {
 
             {candles.map((c, i) => {
               const up = c.close >= c.open;
+              // Center the candle within its cw slot.
               const x = i * cw + cw / 2;
               const color = up ? "#1fcb7c" : "#f0616d";
               const yo = y(c.open);
@@ -162,7 +227,7 @@ export function CandlestickChart() {
                 x2={innerW}
                 y1={y(last)}
                 y2={y(last)}
-                stroke="#1fcb7c"
+                stroke={lastUp ? "#1fcb7c" : "#f0616d"}
                 strokeDasharray="3 3"
                 opacity={0.5}
               />

@@ -27,11 +27,11 @@ export default function TradePage() {
         </div>
 
         {/* Right rail: order book + order form */}
-        <div className="flex flex-col gap-px bg-[rgba(255,255,255,0.06)]">
-          <div className="surface-1 h-[360px]">
+        <div className="flex min-h-0 flex-col gap-px bg-[rgba(255,255,255,0.06)]">
+          <div className="surface-1 shrink-0 overflow-hidden">
             <OrderBook markPrice={mark} />
           </div>
-          <div className="surface-1 flex-1">
+          <div className="surface-1 min-h-0 flex-1 overflow-y-auto">
             <OrderForm />
           </div>
         </div>

@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useOrderbook } from "@/hooks/useOrderbook";
-import type { SlabLevel } from "@/lib/slab";
+import type { SlabLevel } from "@/hooks/useOrderbook";
 import { price as fmtPrice, size as fmtSize } from "@/lib/format";
 
 interface DisplayLevel {
@@ -11,9 +11,12 @@ interface DisplayLevel {
   total: number;
 }
 
+// Cap visible depth so the book never overflows its rail and overlaps the form.
+const DEPTH = 8;
+
 function toDisplay(levels: SlabLevel[]): DisplayLevel[] {
   let running = 0;
-  return levels.map((l) => {
+  return levels.slice(0, DEPTH).map((l) => {
     const sz = Number(l.quantity);
     running += sz;
     return { price: Number(l.price), size: sz, total: running };
@@ -52,10 +55,10 @@ export function OrderBook({ markPrice }: { markPrice: number | null }) {
         : null);
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <div className="flex items-center justify-between border-b hairline px-4 py-2.5">
         <span className="micro-label">Order Book</span>
-        <span className="micro-label">Size / Price / Total</span>
+        <span className="micro-label">Price / Size / Total</span>
       </div>
 
       <div className="grid grid-cols-3 px-4 py-1.5 micro-label">
@@ -72,7 +75,8 @@ export function OrderBook({ markPrice }: { markPrice: number | null }) {
           </p>
         </div>
       ) : (
-        <div className="flex flex-1 flex-col justify-center text-[11px]">
+        <div className="flex min-h-0 flex-1 flex-col justify-center overflow-hidden text-[11px]">
+          {/* asks: lowest just above the spread row -> highest at top */}
           <div className="flex flex-col">
             {asks
               .slice()
@@ -84,14 +88,15 @@ export function OrderBook({ markPrice }: { markPrice: number | null }) {
 
           <div className="surface-1 my-1 flex items-center justify-between border-y hairline px-4 py-2">
             <span className="mono text-sm font-semibold text-bright">
-              {mid !== null ? fmtPrice(mid, 0) : "—"}
+              {mid !== null ? fmtPrice(mid, 2) : "—"}
             </span>
             <span className="micro-label">
-              Spread {spread !== null ? fmtPrice(spread, 0) : "—"}
+              Spread {spread !== null ? fmtPrice(spread, 2) : "—"}
               {spreadPct !== null ? ` · ${spreadPct.toFixed(2)}%` : ""}
             </span>
           </div>
 
+          {/* bids: highest at top -> lowest */}
           <div className="flex flex-col">
             {bids.map((b, i) => (
               <Row key={`b${i}`} level={b} max={maxTotal} side="long" />
@@ -128,13 +133,13 @@ function Row({
       <span
         className={`relative mono ${side === "long" ? "text-long" : "text-short"}`}
       >
-        {fmtPrice(level.price, 0)}
+        {fmtPrice(level.price, 2)}
       </span>
       <span className="relative mono text-right text-dim">
-        {fmtSize(level.size, 0)}
+        {fmtSize(level.size, 3)}
       </span>
       <span className="relative mono text-right text-muted">
-        {fmtSize(level.total, 0)}
+        {fmtSize(level.total, 3)}
       </span>
     </div>
   );
