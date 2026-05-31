@@ -17,26 +17,37 @@ interface Candle {
 const SEED_COUNT = 60;
 const MAX_CANDLES = 80;
 
+// Samples folded into each forming candle before a new one is committed.
+const TICKS_PER_CANDLE = 4;
+
 /**
  * Deterministic seeded history so SSR + re-renders are stable (NO Math.random /
- * Date.now). Uses an index-based sine "hash" for the noise term, producing a
- * realistic-looking sine + noise walk centered on the current price.
+ * Date.now). A pseudo-random walk: each step's direction/size comes from a
+ * hashed index, so it looks like real price action (not a clean sine) and ends
+ * exactly at `base` so it joins the live Pyth tail seamlessly.
  */
 function buildSeed(base: number): Candle[] {
+  const hash = (i: number) => {
+    const n = Math.sin(i * 127.1 + 311.7) * 43758.5453;
+    return n - Math.floor(n); // 0..1
+  };
+  const steps: number[] = [];
+  let price = base;
+  // Walk backwards from `base` so the series ends at the live price.
+  for (let i = SEED_COUNT - 1; i >= 0; i--) {
+    steps[i] = price;
+    const move = (hash(i) - 0.5) * base * 0.012; // ±0.6%
+    const drift = Math.sin(i / 9) * base * 0.002; // gentle trend
+    price = price - move - drift;
+  }
   const out: Candle[] = [];
-  let prevClose = base * 0.992;
   for (let i = 0; i < SEED_COUNT; i++) {
-    const drift = Math.sin(i / 7) * base * 0.012;
-    const n = Math.sin(i * 12.9898) * 43758.5453;
-    const jitter = (n - Math.floor(n) - 0.5) * base * 0.01;
-    const open = prevClose;
-    const close = base + drift + jitter;
-    const wickUp = Math.abs(Math.sin(i * 3.1)) * base * 0.004;
-    const wickDn = Math.abs(Math.cos(i * 2.3)) * base * 0.004;
-    const high = Math.max(open, close) + wickUp;
-    const low = Math.min(open, close) - wickDn;
+    const open = i === 0 ? steps[0] : steps[i - 1];
+    const close = steps[i];
+    const wick = (hash(i + 99) * 0.5 + 0.2) * base * 0.004;
+    const high = Math.max(open, close) + wick;
+    const low = Math.min(open, close) - wick;
     out.push({ open, high, low, close });
-    prevClose = close;
   }
   return out;
 }
@@ -70,26 +81,37 @@ export function CandlestickChart() {
     }
   }, [oracle, market]);
 
-  // Append each NEW live Pyth sample as a fresh candle on the right edge.
+  // Fold new live Pyth samples into a "forming" candle on the right edge,
+  // committing a fresh candle only every TICKS_PER_CANDLE samples. This avoids
+  // the flatline tail you get from appending one near-identical candle per tick.
+  const tickCount = useRef(0);
   useEffect(() => {
     if (!seeded.current) return;
     if (history.length <= lastSampleLen.current) return;
     const fresh = history.slice(lastSampleLen.current);
     lastSampleLen.current = history.length;
+
     setCandles((prev) => {
-      let next = prev;
+      if (prev.length === 0) return prev;
+      let next = [...prev];
       for (const sample of fresh) {
-        const last = next[next.length - 1];
-        const open = last ? last.close : sample;
-        next = [
-          ...next,
-          {
+        const isNewCandle = tickCount.current % TICKS_PER_CANDLE === 0;
+        tickCount.current += 1;
+        if (isNewCandle) {
+          const open = next[next.length - 1].close;
+          next.push({
             open,
             close: sample,
             high: Math.max(open, sample),
             low: Math.min(open, sample),
-          },
-        ];
+          });
+        } else {
+          const last = { ...next[next.length - 1] };
+          last.close = sample;
+          last.high = Math.max(last.high, sample);
+          last.low = Math.min(last.low, sample);
+          next[next.length - 1] = last;
+        }
       }
       return next.slice(-MAX_CANDLES);
     });
