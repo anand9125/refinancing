@@ -149,10 +149,14 @@ export function OrderForm() {
         <Field label="Price (USD)" suffix="USD" disabled={orderType === "market"}>
           <input
             value={orderType === "market" ? "Market" : priceStr}
-            onChange={(e) => setPriceStr(e.target.value)}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v === "" || /^\d*\.?\d*$/.test(v)) setPriceStr(v);
+            }}
             disabled={orderType === "market"}
             placeholder="0"
             inputMode="decimal"
+            autoComplete="off"
             className="mono w-full bg-transparent text-sm text-bright outline-none disabled:text-muted"
           />
         </Field>
@@ -160,9 +164,13 @@ export function OrderForm() {
         <Field label="Size (SOL)" suffix="SOL">
           <input
             value={sizeStr}
-            onChange={(e) => setSizeStr(e.target.value)}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v === "" || /^\d*\.?\d*$/.test(v)) setSizeStr(v);
+            }}
             placeholder="0"
             inputMode="decimal"
+            autoComplete="off"
             className="mono w-full bg-transparent text-sm text-bright outline-none placeholder:text-muted"
           />
         </Field>

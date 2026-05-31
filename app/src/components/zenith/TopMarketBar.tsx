@@ -37,10 +37,11 @@ export function TopMarketBar() {
     return () => clearInterval(id);
   }, []);
 
+  // Recycling countdown to the top of each funding interval — derived from
+  // `now % interval` so it never sticks at 00:00:00 on an interval boundary.
+  const fundingInterval = market?.fundingIntervalSecs || 3600;
   const nextFunding =
-    market !== null
-      ? Math.max(0, market.lastFundingTs + market.fundingIntervalSecs - now)
-      : 0;
+    fundingInterval - (((now % fundingInterval) + fundingInterval) % fundingInterval);
 
   // funding / 1h derived from on-chain cumFunding
   const fundingPct = market ? market.cumFunding * 100 : 0;
