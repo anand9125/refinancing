@@ -18,7 +18,7 @@ const idl = JSON.parse(readFileSync("./target/idl/perp_dex.json", "utf8"));
 
 const SYMBOL = "SOL-PERP";
 const USDC_MINT = new web3.PublicKey(
-  "h4ZDsgjGSnpwyk4U2ZJwj9SMQzjvJbrurGZ5SQKEZUh"
+  "FyFVbnBaxMgRULwznf38DiWvQYdZxJ46NP8evkRiEw2P"
 );
 
 const enc = (s) => Buffer.from(new TextEncoder().encode(s));
