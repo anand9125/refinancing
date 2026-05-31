@@ -27,26 +27,28 @@ const TICKS_PER_CANDLE = 4;
  * exactly at `base` so it joins the live Pyth tail seamlessly.
  */
 function buildSeed(base: number): Candle[] {
-  const hash = (i: number) => {
-    const n = Math.sin(i * 127.1 + 311.7) * 43758.5453;
+  // Two decorrelated hashes per index → choppy, non-repeating noise.
+  const hash = (i: number, s: number) => {
+    const n = Math.sin(i * 12.9898 + s * 78.233) * 43758.5453;
     return n - Math.floor(n); // 0..1
   };
   const steps: number[] = [];
   let price = base;
   // Walk backwards from `base` so the series ends at the live price.
+  // Pure random walk (no sine drift) → real, choppy action, not a smooth arc.
   for (let i = SEED_COUNT - 1; i >= 0; i--) {
     steps[i] = price;
-    const move = (hash(i) - 0.5) * base * 0.012; // ±0.6%
-    const drift = Math.sin(i / 9) * base * 0.002; // gentle trend
-    price = price - move - drift;
+    const move = (hash(i, 1) - 0.5) * base * 0.018; // ±0.9% per step
+    price = price - move;
   }
   const out: Candle[] = [];
   for (let i = 0; i < SEED_COUNT; i++) {
     const open = i === 0 ? steps[0] : steps[i - 1];
     const close = steps[i];
-    const wick = (hash(i + 99) * 0.5 + 0.2) * base * 0.004;
-    const high = Math.max(open, close) + wick;
-    const low = Math.min(open, close) - wick;
+    const wickUp = hash(i, 2) * base * 0.006;
+    const wickDn = hash(i, 3) * base * 0.006;
+    const high = Math.max(open, close) + wickUp;
+    const low = Math.min(open, close) - wickDn;
     out.push({ open, high, low, close });
   }
   return out;
